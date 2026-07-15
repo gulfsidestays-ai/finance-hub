@@ -1,0 +1,120 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// One row per Plaid Item (one bank login can cover multiple accounts)
+model PlaidItem {
+  id              String    @id @default(cuid())
+  itemId          String    @unique
+  accessToken     String // Plaid access_token. This app is single-user/self-hosted; treat DATABASE_URL access as sensitive.
+  institutionId   String?
+  institutionName String?
+  transactionsCursor String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  accounts        Account[]
+}
+
+enum AccountType {
+  checking
+  savings
+  credit_card
+  loan
+  investment
+  other
+}
+
+model Account {
+  id               String        @id @default(cuid())
+  name             String
+  officialName     String?
+  institutionName  String?
+  type             AccountType
+  subtype          String?
+  mask             String?
+  currentBalance   Float         @default(0)
+  availableBalance Float?
+  creditLimit      Float?
+  isManual         Boolean       @default(true)
+  plaidAccountId   String?       @unique
+  plaidItemId      String?
+  plaidItem        PlaidItem?    @relation(fields: [plaidItemId], references: [id], onDelete: SetNull)
+  transactions     Transaction[]
+  bills            Bill[]
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+}
+
+model Transaction {
+  id                  String   @id @default(cuid())
+  accountId            String
+  account               Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  plaidTransactionId   String?  @unique
+  name                 String
+  merchantName         String?
+  amount               Float // positive = money out, negative = money in (Plaid convention)
+  isoCurrencyCode      String   @default("USD")
+  category             String? // primary category, e.g. "Food and Drink"
+  subcategory          String?
+  date                 DateTime
+  pending              Boolean  @default(false)
+  isRecurring          Boolean  @default(false)
+  createdAt            DateTime @default(now())
+
+  @@index([accountId])
+  @@index([date])
+  @@index([category])
+}
+
+model Budget {
+  id           String   @id @default(cuid())
+  category     String   @unique
+  monthlyLimit Float
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Bill {
+  id             String    @id @default(cuid())
+  name           String
+  amount         Float
+  dueDay         Int // day of month, 1-31
+  category       String?
+  isAutoDetected Boolean   @default(false)
+  active         Boolean   @default(true)
+  accountId      String?
+  account        Account?  @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  lastPaidDate   DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+// Static-ish reference table of credit card products used by the
+// recommendation engine. Seeded from a curated JSON dataset (see lib/creditCards.ts).
+// This is informational only — not personalized financial advice.
+model CreditCardOption {
+  id           String   @id @default(cuid())
+  issuer       String
+  name         String
+  annualFee    Float    @default(0)
+  rewardsJson  String // JSON-encoded map of category -> reward rate (e.g. {"dining":3,"groceries":2,"other":1})
+  signupBonus  String?
+  notes        String?
+  applyUrl     String?
+  createdAt    DateTime @default(now())
+}
+
+model NetWorthSnapshot {
+  id              String   @id @default(cuid())
+  date            DateTime @default(now())
+  totalAssets     Float
+  totalLiabilities Float
+  netWorth        Float
+
+  @@index([date])
+}
