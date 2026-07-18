@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { computeBudgets } from "@/lib/budgets";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const budgets = await computeBudgets();
   return NextResponse.json(budgets);

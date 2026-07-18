@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { normalizeCategory, SpendCategory } from "@/lib/categories";
 import { CREDIT_CARD_SEED_DATA, scoreCards } from "@/lib/creditCards";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const twelveMonthsAgo = new Date();
   twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
