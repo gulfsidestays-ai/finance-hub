@@ -1,21 +1,15 @@
-import { prisma } from "@/lib/prisma";
-import BillsList from "@/components/BillsList";
+import BillsView from "@/components/BillsView";
 
 export const dynamic = "force-dynamic";
 
-export default async function BillsPage() {
-  const bills = await prisma.bill.findMany({
-    where: { active: true },
-    orderBy: { dueDay: "asc" },
-  });
-
+export default function BillsPage() {
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">Bills & Subscriptions</h1>
-        <p className="text-muted text-sm mt-1">Recurring payments and when they're due each month.</p>
+        <p className="text-muted text-sm mt-1">Recurring payments, auto-detected from your transactions and projected onto a calendar.</p>
       </div>
-      <BillsList bills={bills} />
+      <BillsView />
     </div>
   );
 }

@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const bills = await prisma.bill.findMany({
     where: { active: true },
-    orderBy: { dueDay: "asc" },
+    orderBy: [{ nextDueDate: "asc" }, { dueDay: "asc" }],
     include: { account: { select: { name: true } } },
   });
   return NextResponse.json(bills);
@@ -14,7 +14,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { name, amount, dueDay, category, accountId } = body;
+  const { name, amount, dueDay, category, accountId, frequency, nextDueDate, type } = body;
 
   if (!name || amount == null || dueDay == null) {
     return NextResponse.json({ error: "name, amount, dueDay are required" }, { status: 400 });
@@ -30,6 +30,10 @@ export async function POST(req: NextRequest) {
       dueDay: Number(dueDay),
       category: category ?? null,
       accountId: accountId || null,
+      frequency: frequency ?? null,
+      nextDueDate: nextDueDate ? new Date(nextDueDate) : null,
+      type: type ?? "bill",
+      isAutoDetected: false,
     },
   });
   return NextResponse.json(bill, { status: 201 });

@@ -185,15 +185,27 @@ model Bill {
   id             String    @id @default(cuid())
   name           String
   amount         Float
-  dueDay         Int // day of month, 1-31
+  dueDay         Int // day of month, 1-31 (used for monthly manual bills / back-compat)
   category       String?
   isAutoDetected Boolean   @default(false)
   active         Boolean   @default(true)
   accountId      String?
   account        Account?  @relation(fields: [accountId], references: [id], onDelete: SetNull)
   lastPaidDate   DateTime?
+  // ---- Phase 2: recurring-bill scheduling + auto-detection ----
+  frequency      String?  // weekly | biweekly | monthly | quarterly | annual
+  nextDueDate    DateTime? // primary scheduling field (overrides dueDay when set)
+  lastAmount     Float?    // most recent occurrence amount (for variable bills)
+  avgAmount      Float?    // rolling average amount
+  type           String?  // bill | subscription
+  confidence     Float?    // detection confidence 0..1 (null for manual bills)
+  sourceNames    String?  // JSON array of matched transaction names (traceability)
+  autoDetectedAt DateTime?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+
+  @@index([active])
+  @@index([nextDueDate])
 }
 
 // Static-ish reference table of credit card products used by the
