@@ -3,7 +3,10 @@ import { prisma } from "./prisma";
 const LIABILITY_TYPES = ["credit_card", "loan"];
 
 export async function computeNetWorth() {
-  const accounts = await prisma.account.findMany();
+  const [accounts, assets] = await Promise.all([
+    prisma.account.findMany(),
+    prisma.asset.findMany(),
+  ]);
 
   let totalAssets = 0;
   let totalLiabilities = 0;
@@ -13,6 +16,11 @@ export async function computeNetWorth() {
     } else {
       totalAssets += a.currentBalance;
     }
+  }
+  // Manual assets/liabilities (property, vehicles, crypto, manual loans, etc.)
+  for (const a of assets) {
+    if (a.isLiability) totalLiabilities += a.value;
+    else totalAssets += a.value;
   }
   const netWorth = totalAssets - totalLiabilities;
 
@@ -35,5 +43,5 @@ export async function computeNetWorth() {
     take: 180,
   });
 
-  return { totalAssets, totalLiabilities, netWorth, history, accounts };
+  return { totalAssets, totalLiabilities, netWorth, history, accounts, assets };
 }

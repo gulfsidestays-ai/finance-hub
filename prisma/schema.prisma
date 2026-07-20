@@ -257,3 +257,21 @@ model Goal {
   @@index([linkedAccountId])
   @@index([active])
 }
+
+
+// ---- Phase 4: Manual assets & liabilities (property, vehicles, crypto, other) ----
+model Asset {
+  id          String   @id @default(cuid())
+  name        String
+  category    String   // property | vehicle | crypto | cash | other_asset | mortgage | loan | other_liability
+  isLiability Boolean  @default(false)
+  value       Float    // estimated market value; for liabilities, the amount owed (positive)
+  quantity    Float?   // crypto units (optional)
+  ticker      String?  // symbol (crypto/stock) for future price fetch
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+  @@index([isLiability])
+}
