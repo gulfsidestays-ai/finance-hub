@@ -11,15 +11,25 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { category, monthlyLimit } = body;
-  if (!category || monthlyLimit == null) {
-    return NextResponse.json({ error: "category and monthlyLimit are required" }, { status: 400 });
+  const { category, categoryId, monthlyLimit, rollover } = body;
+  if (monthlyLimit == null || (!category && !categoryId)) {
+    return NextResponse.json({ error: "category (or categoryId) and monthlyLimit are required" }, { status: 400 });
+  }
+
+  let resolvedName = category;
+  let resolvedCategoryId = categoryId ?? null;
+  if (categoryId) {
+    const cat = await prisma.category.findUnique({ where: { id: categoryId } });
+    if (cat) resolvedName = cat.name;
+  }
+  if (!resolvedName) {
+    return NextResponse.json({ error: "Category not found" }, { status: 400 });
   }
 
   const budget = await prisma.budget.upsert({
-    where: { category },
-    update: { monthlyLimit: Number(monthlyLimit) },
-    create: { category, monthlyLimit: Number(monthlyLimit) },
+    where: { category: resolvedName },
+    update: { monthlyLimit: Number(monthlyLimit), rollover: rollover ?? false, categoryId: resolvedCategoryId },
+    create: { category: resolvedName, categoryId: resolvedCategoryId, monthlyLimit: Number(monthlyLimit), rollover: rollover ?? false },
   });
   return NextResponse.json(budget, { status: 201 });
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPlaidClient } from "@/lib/plaid";
 import { prisma } from "@/lib/prisma";
+import { applyRulesToTransaction } from "@/lib/rules";
 
 export async function POST() {
   try {
@@ -29,7 +30,11 @@ export async function POST() {
         for (const txn of data.added) {
           const localAccountId = accountByPlaidId.get(txn.account_id);
           if (!localAccountId) continue;
-          await prisma.transaction.upsert({
+          const existing = await prisma.transaction.findUnique({
+            where: { plaidTransactionId: txn.transaction_id },
+            select: { id: true },
+          });
+          const record = await prisma.transaction.upsert({
             where: { plaidTransactionId: txn.transaction_id },
             update: {
               amount: txn.amount,
@@ -51,7 +56,11 @@ export async function POST() {
               pending: txn.pending,
             },
           });
-          added++;
+          // Auto-categorize via rules on newly created transactions only.
+          if (!existing && record?.id) {
+            try { await applyRulesToTransaction(record.id); } catch {}
+            added++;
+          }
         }
 
         for (const txn of data.modified) {

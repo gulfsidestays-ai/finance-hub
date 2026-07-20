@@ -59,24 +59,126 @@ model Transaction {
   merchantName         String?
   amount               Float // positive = money out, negative = money in (Plaid convention)
   isoCurrencyCode      String   @default("USD")
-  category             String? // primary category, e.g. "Food and Drink"
+  category             String? // primary category name (kept in sync with categoryId for back-compat)
   subcategory          String?
+  categoryId           String? // link to the Category model (optional, richer)
+  categoryRef          Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   date                 DateTime
   pending              Boolean  @default(false)
   isRecurring          Boolean  @default(false)
+  reviewed             Boolean  @default(false)
+  notes                String?
   createdAt            DateTime @default(now())
+
+  tags                TransactionTag[]
+  splits              TransactionSplit[]
 
   @@index([accountId])
   @@index([date])
   @@index([category])
+  @@index([categoryId])
+  @@index([reviewed])
+}
+
+// ---- Category model (Phase 1: Monarch-style categories & groups) ----
+
+enum CategoryType {
+  income
+  expense
+  transfer
+}
+
+model CategoryGroup {
+  id         String       @id @default(cuid())
+  name       String
+  type       CategoryType @default(expense)
+  sortOrder  Int          @default(0)
+  isSystem   Boolean      @default(false)
+  categories Category[]
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+}
+
+model Category {
+  id                String       @id @default(cuid())
+  groupId           String
+  group             CategoryGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  name              String
+  emoji             String?
+  type              CategoryType @default(expense)
+  rollover          Boolean      @default(false)
+  excludeFromBudget Boolean      @default(false)
+  sortOrder         Int          @default(0)
+  isSystem          Boolean      @default(false)
+  transactions      Transaction[]
+  splits            TransactionSplit[]
+  budgets           Budget[]
+  rules             TransactionRule[]
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  @@index([groupId])
+}
+
+model Tag {
+  id           String           @id @default(cuid())
+  name         String           @unique
+  color        String           @default("#3b82f6")
+  transactions TransactionTag[]
+  createdAt    DateTime         @default(now())
+}
+
+model TransactionTag {
+  id            String      @id @default(cuid())
+  transactionId String
+  tagId         String
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  tag           Tag         @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([transactionId, tagId])
+  @@index([tagId])
+}
+
+model TransactionRule {
+  id          String    @id @default(cuid())
+  name        String?
+  matchField  String    @default("name") // name | merchantName | category
+  matchType   String    @default("contains") // contains | equals | startsWith | regex
+  matchValue  String
+  categoryId  String?
+  category    Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  setReviewed Boolean   @default(false)
+  addTags     String?  // comma-separated tag names
+  sortOrder   Int       @default(0)
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model TransactionSplit {
+  id            String    @id @default(cuid())
+  transactionId String
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  amount        Float
+  categoryId    String?
+  category      Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  notes         String?
+  createdAt     DateTime  @default(now())
+
+  @@index([transactionId])
 }
 
 model Budget {
   id           String   @id @default(cuid())
-  category     String   @unique
+  category     String?  @unique // category name (kept for back-compat; new budgets also set categoryId)
+  categoryId   String?  // link to Category model
+  categoryRef  Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   monthlyLimit Float
+  rollover     Boolean  @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  @@index([categoryId])
 }
 
 model Bill {

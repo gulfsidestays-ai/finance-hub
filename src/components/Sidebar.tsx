@@ -7,9 +7,12 @@ const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: "◎" },
   { href: "/accounts", label: "Accounts", icon: "▤" },
   { href: "/transactions", label: "Transactions", icon: "⇄" },
+  { href: "/cashflow", label: "Cash Flow", icon: "📈" },
   { href: "/budgets", label: "Budgets", icon: "▦" },
   { href: "/bills", label: "Bills & Subscriptions", icon: "⏱" },
   { href: "/recommendations", label: "Credit Recommendations", icon: "★" },
+  { href: "/settings/categories", label: "Categories", icon: "🏷" },
+  { href: "/settings/rules", label: "Rules", icon: "⚙" },
 ];
 
 export default function Sidebar() {

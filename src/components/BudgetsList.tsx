@@ -1,28 +1,50 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { formatMoney, formatCategory } from "@/lib/format";
-import { SPEND_CATEGORIES, SpendCategory } from "@/lib/categories";
+import { formatMoney } from "@/lib/format";
 
-type Budget = { id: string; category: string; monthlyLimit: number; spent: number };
+type Budget = {
+  id: string;
+  category: string | null;
+  categoryId: string | null;
+  categoryRef: { name: string; emoji: string | null } | null;
+  monthlyLimit: number;
+  rollover: boolean;
+  rolloverAmount: number;
+  limit: number;
+  spent: number;
+  remaining: number;
+  pct: number;
+  over: boolean;
+};
+
+type Group = { id: string; name: string; categories: { id: string; name: string; emoji: string | null }[] };
 
 export default function BudgetsList({ budgets }: { budgets: Budget[] }) {
   const router = useRouter();
-  const [category, setCategory] = useState(SPEND_CATEGORIES[0]);
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [categoryId, setCategoryId] = useState("");
   const [limit, setLimit] = useState("");
+  const [rollover, setRollover] = useState(false);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/categories").then((r) => r.json()).then(setGroups).catch(() => {});
+  }, []);
 
   async function addBudget(e: React.FormEvent) {
     e.preventDefault();
+    if (!categoryId || !limit) return;
     setBusy(true);
     await fetch("/api/budgets", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ category, monthlyLimit: Number(limit) }),
+      body: JSON.stringify({ categoryId, monthlyLimit: Number(limit), rollover }),
     });
     setBusy(false);
     setLimit("");
+    setRollover(false);
     router.refresh();
   }
 
@@ -33,66 +55,57 @@ export default function BudgetsList({ budgets }: { budgets: Budget[] }) {
 
   return (
     <div className="space-y-4">
-      {budgets.length === 0 && <p className="text-muted text-sm">No budgets yet.</p>}
+      {budgets.length === 0 && <p className="text-muted text-sm">No budgets yet. Add one below.</p>}
       {budgets.map((b) => {
-        const pct = b.monthlyLimit > 0 ? Math.min(100, (b.spent / b.monthlyLimit) * 100) : 0;
-        const over = b.spent > b.monthlyLimit;
+        const pct = Math.min(100, b.pct * 100);
         return (
           <div key={b.id} className="card">
             <div className="flex justify-between text-sm mb-2">
-              <span className="font-medium">{formatCategory(b.category)}</span>
-              <span className={over ? "text-danger" : "text-muted"}>
-                {formatMoney(b.spent)} / {formatMoney(b.monthlyLimit)}
+              <span className="font-medium">
+                {b.categoryRef?.emoji ?? "📦"} {b.categoryRef?.name ?? b.category ?? "Uncategorized"}
+                {b.rollover && <span className="ml-2 text-xs text-accent2">rollover</span>}
+              </span>
+              <span className={b.over ? "text-danger" : "text-muted"}>
+                {formatMoney(b.spent)} / {formatMoney(b.limit)}
+                {b.rolloverAmount > 0 && <span className="text-xs"> (+{formatMoney(b.rolloverAmount)} rolled)</span>}
               </span>
             </div>
             <div className="h-2 rounded-full bg-panel2 overflow-hidden">
-              <div
-                className={`h-full ${over ? "bg-danger" : "bg-accent"}`}
-                style={{ width: `${pct}%` }}
-              />
+              <div className={`h-full ${b.over ? "bg-danger" : "bg-accent"}`} style={{ width: `${pct}%` }} />
             </div>
-            <button
-              onClick={() => remove(b.id)}
-              className="text-xs text-muted hover:text-danger mt-2"
-            >
-              Remove budget
-            </button>
+            <div className="flex justify-between mt-2">
+              <span className="text-xs text-muted">{formatMoney(b.remaining)} remaining</span>
+              <button onClick={() => remove(b.id)} className="text-xs text-muted hover:text-danger">Remove</button>
+            </div>
           </div>
         );
       })}
 
       <form onSubmit={addBudget} className="card space-y-3">
         <div className="text-sm font-medium">Add a budget</div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="sm:col-span-2">
             <label className="label">Category</label>
-            <select
-              className="input"
-              value={category}
-              onChange={(e) => setCategory(e.target.value as SpendCategory)}
-            >
-              {SPEND_CATEGORIES.map((c) => (
-                <option key={c} value={c}>
-                  {formatCategory(c)}
-                </option>
+            <select className="input" value={categoryId} onChange={(e) => setCategoryId(e.target.value)} required>
+              <option value="">Choose…</option>
+              {groups.map((g) => (
+                <optgroup key={g.id} label={g.name}>
+                  {g.categories.map((c) => (
+                    <option key={c.id} value={c.id}>{c.emoji} {c.name}</option>
+                  ))}
+                </optgroup>
               ))}
             </select>
           </div>
           <div>
             <label className="label">Monthly limit</label>
-            <input
-              className="input"
-              type="number"
-              step="0.01"
-              value={limit}
-              onChange={(e) => setLimit(e.target.value)}
-              required
-            />
+            <input className="input" type="number" step="0.01" value={limit} onChange={(e) => setLimit(e.target.value)} required />
           </div>
         </div>
-        <button type="submit" disabled={busy} className="btn-primary">
-          {busy ? "Saving..." : "Add budget"}
-        </button>
+        <label className="flex items-center gap-2 text-sm text-muted">
+          <input type="checkbox" checked={rollover} onChange={(e) => setRollover(e.target.checked)} /> Roll over unused budget to next month
+        </label>
+        <button className="btn-primary" disabled={busy || !categoryId || !limit}>Add budget</button>
       </form>
     </div>
   );
