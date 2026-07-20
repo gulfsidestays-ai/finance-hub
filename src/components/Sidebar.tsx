@@ -10,6 +10,7 @@ const NAV = [
   { href: "/cashflow", label: "Cash Flow", icon: "📈" },
   { href: "/budgets", label: "Budgets", icon: "▦" },
   { href: "/bills", label: "Bills & Subscriptions", icon: "⏱" },
+  { href: "/goals", label: "Goals", icon: "🎯" },
   { href: "/recommendations", label: "Credit Recommendations", icon: "★" },
   { href: "/settings/categories", label: "Categories", icon: "🏷" },
   { href: "/settings/rules", label: "Rules", icon: "⚙" },

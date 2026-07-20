@@ -46,6 +46,7 @@ model Account {
   plaidItem        PlaidItem?    @relation(fields: [plaidItemId], references: [id], onDelete: SetNull)
   transactions     Transaction[]
   bills            Bill[]
+  goals            Goal[]
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
 }
@@ -231,4 +232,28 @@ model NetWorthSnapshot {
   netWorth        Float
 
   @@index([date])
+}
+
+
+// ---- Phase 3: Goals (savings + debt payoff) ----
+model Goal {
+  id                  String    @id @default(cuid())
+  name                String
+  type                String    @default("savings") // savings | debt
+  targetAmount        Float     // savings target; for debt, the target balance (usually 0)
+  currentAmount       Float     @default(0) // manual current amount / manual debt balance fallback
+  startingAmount      Float?    // snapshot for progress math
+  targetDate          DateTime? // optional target completion date
+  monthlyContribution Float?    // savings contribution or debt payment
+  linkedAccountId     String?  // optional: savings account (auto-track) or debt account (live balance)
+  linkedAccount       Account?  @relation(fields: [linkedAccountId], references: [id], onDelete: SetNull)
+  interestRate        Float?    // APR percent (e.g. 24.99), for debt payoff
+  active              Boolean   @default(true)
+  completedAt         DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([type])
+  @@index([linkedAccountId])
+  @@index([active])
 }
