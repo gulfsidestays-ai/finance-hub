@@ -136,7 +136,8 @@ export async function detectRecurringBills(): Promise<DetectionResult> {
     confidence = Math.min(1, confidence);
 
     const last = sorted[sorted.length - 1];
-    const nextDueDate = advanceDate(last.date, frequency, 1);
+    // Roll forward to the next future occurrence so "next due" is upcoming, not stale.
+    const nextDueDate = computeNextDueDate(last.date, frequency, new Date());
 
     const isSubscription = /streaming|subscription|software|membership|netflix|spotify|hulu|disney|apple|google|adobe|amazon prime/i.test(cat + " " + last.name);
 
