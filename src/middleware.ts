@@ -1,30 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { COOKIE_NAME, isValidSessionToken } from "@/lib/auth";
 
+// Password gate has been removed — the app is now open access.
+// The only behavior kept is redirecting the old /login page to the dashboard
+// so the (now unused) login form is never shown.
 export const config = {
   matcher: [
     /*
-     * Match all paths except:
-     * - /login (the login page + its API route)
-     * - /_next (Next.js internals)
-     * - static files
+     * Match all paths except Next.js internals and static files.
      */
-    "/((?!login|api/auth/login|_next/static|_next/image|favicon.ico).*)",
+    "/((?!_next/static|_next/image|favicon.ico).*)",
   ],
 };
 
 export function middleware(req: NextRequest) {
-  const token = req.cookies.get(COOKIE_NAME)?.value;
-
-  if (isValidSessionToken(token)) {
-    return NextResponse.next();
+  if (req.nextUrl.pathname === "/login") {
+    return NextResponse.redirect(new URL("/dashboard", req.url));
   }
-
-  if (req.nextUrl.pathname.startsWith("/api")) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const loginUrl = new URL("/login", req.url);
-  loginUrl.searchParams.set("next", req.nextUrl.pathname);
-  return NextResponse.redirect(loginUrl);
+  return NextResponse.next();
 }
