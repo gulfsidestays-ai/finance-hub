@@ -37,12 +37,13 @@ export default function ForecastView() {
   const range = max - min || 1;
   const xStep = (W - 2 * P) / Math.max(pts.length - 1, 1);
   const y = (v: number) => H - P - ((v - min) / range) * (H - 2 * P);
-  const path = pts.map((p, i) => `${i === 0 ? "M" : "L"}${P + i * xStep},${y(p.netWorth)}`).join(" ");
-  const zeroY = y(0);
-  const showZero = min < 0 && max > 0;
-
+  const linePath = pts.map((p, i) => `${i === 0 ? "M" : "L"}${P + i * xStep},${y(p.netWorth)}`).join(" ");
+  const areaPath = `${linePath} L${P + (pts.length - 1) * xStep},${H - P} L${P},${H - P} Z`;
   const end = pts[pts.length - 1];
   const trend = end.netWorth - data.startNetWorth;
+  const zeroY = y(0);
+  const showZero = min < 0 && max > 0;
+  const trendColor = trend >= 0 ? "#22c55e" : "#ef4444";
 
   return (
     <div className="space-y-6">
@@ -68,10 +69,17 @@ export default function ForecastView() {
       <div className="card p-5">
         <h2 className="text-sm font-medium mb-3">Net worth projection (12 months)</h2>
         <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto">
+          <defs>
+            <linearGradient id="fc-grad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={trendColor} stopOpacity="0.35" />
+              <stop offset="100%" stopColor={trendColor} stopOpacity="0" />
+            </linearGradient>
+          </defs>
           {showZero && <line x1={P} y1={zeroY} x2={W - P} y2={zeroY} stroke="#ef4444" strokeDasharray="4 4" strokeWidth={1} />}
-          <path d={path} fill="none" stroke="#22c55e" strokeWidth={2} />
+          <path d={areaPath} fill="url(#fc-grad)" />
+          <path d={linePath} fill="none" stroke={trendColor} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
           {pts.map((p, i) => (
-            <circle key={p.month} cx={P + i * xStep} cy={y(p.netWorth)} r={3} fill="#22c55e" />
+            <circle key={p.month} cx={P + i * xStep} cy={y(p.netWorth)} r={i === pts.length - 1 ? 4 : 2.5} fill={trendColor} />
           ))}
           {pts.filter((_, i) => i % 2 === 0).map((p, i) => (
             <text key={p.month} x={P + (i * 2) * xStep} y={H - 8} fill="#8b93a7" fontSize={10} textAnchor="middle">{p.label}</text>
