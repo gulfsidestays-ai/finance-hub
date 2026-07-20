@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { computeNextDueDate } from "@/lib/billDetection";
+import { advanceDate, Frequency } from "@/lib/billDetection";
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const body = await req.json();
@@ -18,15 +18,31 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     nextDueDate: body.nextDueDate ? new Date(body.nextDueDate) : undefined,
   };
 
-  // Mark paid: set lastPaidDate and advance nextDueDate past today.
+  // Mark paid: set lastPaidDate and schedule the NEXT occurrence one period ahead.
   if (body.markPaid) {
     const paidDate = body.paidDate ? new Date(body.paidDate) : new Date();
     data.lastPaidDate = paidDate;
-    const freq = existing?.frequency ?? null;
-    data.nextDueDate = computeNextDueDate(existing?.nextDueDate ?? null, freq as string | null, paidDate);
-    // Keep dueDay synced for monthly bills.
+    const freq = (existing?.frequency as Frequency | null) ?? null;
+
+    let next: Date;
+    if (existing?.nextDueDate && freq) {
+      // Pay the upcoming occurrence → advance one period, then roll forward
+      // past the paid date in case it had fallen behind.
+      next = advanceDate(new Date(existing.nextDueDate), freq, 1);
+      while (next <= paidDate) next = advanceDate(next, freq, 1);
+    } else if (freq) {
+      // No seed date: start from paid date and advance one period.
+      next = advanceDate(new Date(paidDate), freq, 1);
+    } else {
+      // Manual monthly bill: next month, same day-of-month as dueDay.
+      next = new Date(paidDate);
+      next.setMonth(next.getMonth() + 1);
+      const dim = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate();
+      next.setDate(Math.min(existing?.dueDay ?? paidDate.getDate(), dim));
+    }
+    data.nextDueDate = next;
     if (!freq || freq === "monthly") {
-      data.dueDay = (data.nextDueDate as Date).getDate();
+      data.dueDay = next.getDate();
     }
   }
 
