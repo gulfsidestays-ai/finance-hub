@@ -12,6 +12,7 @@ const NAV = [
   { href: "/bills", label: "Bills & Subscriptions", icon: "⏱" },
   { href: "/goals", label: "Goals", icon: "🎯" },
   { href: "/networth", label: "Net Worth", icon: "◈" },
+  { href: "/investments", label: "Investments", icon: "↗" },
   { href: "/recommendations", label: "Credit Recommendations", icon: "★" },
   { href: "/settings/categories", label: "Categories", icon: "🏷" },
   { href: "/settings/rules", label: "Rules", icon: "⚙" },

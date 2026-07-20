@@ -275,3 +275,25 @@ model Asset {
   @@index([category])
   @@index([isLiability])
 }
+
+
+// ---- Phase 5: Investment holdings + S&P 500 benchmark ----
+model Holding {
+  id                String    @id @default(cuid())
+  ticker            String
+  name              String
+  type              String    @default("stock") // stock | etf | bond | crypto | cash | other
+  shares            Float     @default(0)
+  costBasis         Float     @default(0) // total dollars invested
+  currentPrice      Float     @default(0) // manual price
+  purchaseDate      DateTime?
+  includeInNetWorth Boolean   @default(true)
+  notes             String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([ticker])
+  @@index([type])
+  @@index([purchaseDate])
+  @@index([includeInNetWorth])
+}

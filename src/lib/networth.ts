@@ -3,9 +3,10 @@ import { prisma } from "./prisma";
 const LIABILITY_TYPES = ["credit_card", "loan"];
 
 export async function computeNetWorth() {
-  const [accounts, assets] = await Promise.all([
+  const [accounts, assets, holdings] = await Promise.all([
     prisma.account.findMany(),
     prisma.asset.findMany(),
+    prisma.holding.findMany({ where: { includeInNetWorth: true } }),
   ]);
 
   let totalAssets = 0;
@@ -22,6 +23,8 @@ export async function computeNetWorth() {
     if (a.isLiability) totalLiabilities += a.value;
     else totalAssets += a.value;
   }
+  // Investment holdings (manual) included in net worth
+  for (const h of holdings) totalAssets += h.shares * h.currentPrice;
   const netWorth = totalAssets - totalLiabilities;
 
   const startOfDay = new Date();
