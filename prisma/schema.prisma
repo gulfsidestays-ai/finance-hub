@@ -297,3 +297,22 @@ model Holding {
   @@index([purchaseDate])
   @@index([includeInNetWorth])
 }
+
+
+// ---- Phase 7: Shared access (partner / advisor read-only links) ----
+model Share {
+  id             String    @id @default(cuid())
+  name           String
+  role           String    @default("viewer") // viewer | advisor | partner
+  tokenHash      String    @unique
+  tokenPreview   String?   // last 6 chars for UI display
+  scopes         String    // JSON array of page scopes
+  expiresAt      DateTime?
+  revokedAt      DateTime?
+  lastAccessedAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([revokedAt])
+  @@index([expiresAt])
+}

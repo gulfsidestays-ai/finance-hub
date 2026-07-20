@@ -17,6 +17,7 @@ const NAV = [
   { href: "/recommendations", label: "Credit Recommendations", icon: "★" },
   { href: "/settings/categories", label: "Categories", icon: "🏷" },
   { href: "/settings/rules", label: "Rules", icon: "⚙" },
+  { href: "/settings/sharing", label: "Sharing", icon: "🔗" },
 ];
 
 export default function Sidebar() {
